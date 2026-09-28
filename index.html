@@ -292,7 +292,9 @@
           </div>
         </div>
 
-        <form id="contactForm" novalidate>
+        <form id="contactForm" name="contact" method="POST" action="/" data-netlify="true" netlify-honeypot="bot-field" novalidate>
+          <input type="hidden" name="form-name" value="contact">
+          <p style="display:none"><label>Ne pas remplir : <input name="bot-field"></label></p>
           <div class="row2">
             <div class="field">
               <label for="nom">Nom</label>
@@ -430,15 +432,31 @@
       return;
     }
 
-    const pref = wantsCall() ? `Rappel téléphonique (${document.getElementById('creneau').value})` : 'Email';
-    const subject = encodeURIComponent(`${wantsCall() ? 'Demande de rappel' : 'Demande de contact'} — ${document.getElementById('domaine').value}`);
-    const body = encodeURIComponent(
-      `Nom : ${v('nom')}\nPrénom : ${v('prenom')}\nEmail : ${v('email')}\nTéléphone : ${v('telephone')}\nPréférence : ${pref}\nDomaine : ${document.getElementById('domaine').value}\n\nMessage :\n${v('message')}`
-    );
-    window.location.href = `mailto:contact@kba-conseil.fr?subject=${subject}&body=${body}`;
+    const btn = form.querySelector('.btn-submit');
+    btn.disabled = true;
+    status.textContent = 'Envoi en cours…';
+    status.classList.remove('ok');
 
-    status.textContent = 'Votre messagerie va s\'ouvrir pour envoyer la demande.';
-    status.classList.add('ok');
+    const data = new URLSearchParams(new FormData(form));
+    if(!wantsCall()) data.delete('creneau');
+    data.set('consent', 'Oui');
+
+    fetch('/', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: data.toString()
+    })
+    .then(r => {
+      if(!r.ok) throw new Error(r.status);
+      form.reset();
+      creneauField.classList.remove('show');
+      status.textContent = 'Merci, votre demande a bien été envoyée. Réponse sous 24h ouvrées.';
+      status.classList.add('ok');
+    })
+    .catch(() => {
+      status.textContent = 'L\'envoi a échoué. Écrivez-nous directement à contact@kba-conseil.fr.';
+    })
+    .finally(() => { btn.disabled = false; });
   });
 </script>
 
